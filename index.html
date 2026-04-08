@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sana Bir Sürprizim Var!</title>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            /* İlk oyun ekranı arka planı */
+            background: linear-gradient(135deg, #1a1a2e, #0f3460); 
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+            cursor: pointer;
+        }
+
+        #game-area {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        /* Yerdeki Yol */
+        .ground {
+            position: absolute;
+            bottom: 35%;
+            left: 10%;
+            width: 80%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+        }
+
+        /* Karakterin Ayarları */
+        #character {
+            position: absolute;
+            bottom: 36%;
+            left: 10%;
+            width: 100px;
+            height: auto;
+            transition: left 0.4s ease-out, transform 0.1s;
+            z-index: 10;
+        }
+
+        /* Yürüme Efekti */
+        .walk-wobble {
+            transform: rotate(15deg) translateY(-10px) !important;
+        }
+
+        /* Mektubun Ayarları */
+        #letter {
+            position: absolute;
+            bottom: 35%;
+            right: 10%;
+            font-size: 65px;
+            animation: bounce 2s infinite;
+        }
+
+        /* Final Ekranı (Kozmik Evren Arka Planı) */
+        #final-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* Derin uzay hissi veren radyal arka plan */
+            background: radial-gradient(circle at center, #2b1055 0%, #050505 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1.5s ease-in-out;
+            z-index: 20;
+            overflow: hidden; /* Dışarı taşan kalpleri gizle */
+        }
+
+        #final-screen.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Final Yazısı (En önde ve parlıyor) */
+        #final-text {
+            font-family: 'Dancing Script', cursive;
+            font-size: 35px;
+            color: #ffd700;
+            text-align: center;
+            padding: 20px;
+            text-shadow: 0 0 15px #ffd700, 0 0 30px #ff007f;
+            line-height: 1.6;
+            z-index: 50; /* Kalplerin önünde kalması için yüksek z-index */
+            transform: scale(0.8);
+            transition: transform 2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        #final-screen.show #final-text {
+            transform: scale(1);
+        }
+
+        /* ----- HİÇ BİTMEYEN EVREN ANİMASYONLARI ----- */
+        .universe-particle {
+            position: absolute;
+            pointer-events: none;
+            z-index: 10; /* Yazının arkasında, arka planın önünde */
+            animation: cosmicFloat linear forwards;
+            filter: drop-shadow(0 0 8px rgba(255, 105, 180, 0.8)); /* Parlama efekti */
+        }
+
+        /* Gezegen/Yıldız gibi süzülme efekti */
+        @keyframes cosmicFloat {
+            0% {
+                transform: translate(0, 0) scale(0.1) rotate(0deg);
+                opacity: 0;
+            }
+            20% {
+                opacity: 1;
+            }
+            80% {
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--moveX), var(--moveY)) scale(var(--finalScale)) rotate(var(--rotation));
+                opacity: 0;
+            }
+        }
+
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+    </style>
+</head>
+<body>
+
+    <div id="game-area">
+        <div class="ground"></div>
+        <img id="character" src="kendi-karakterin.png">
+        <div id="letter">💌</div>
+    </div>
+
+    <div id="final-screen">
+        <div id="final-text">
+           Sen benim başıma gelen<br>
+            en güzel şeysin!<br>
+            Seni Çok Seviyorum! ❤️
+        </div>
+    </div>
+
+    <script>
+        let step = 0;
+        const maxSteps = 4;
+        const character = document.getElementById('character');
+        const letter = document.getElementById('letter');
+        const finalScreen = document.getElementById('final-screen');
+        let universeInterval; // Sonsuz döngüyü kontrol etmek için
+
+        document.body.addEventListener('click', moveCharacter);
+        document.body.addEventListener('touchstart', moveCharacter);
+
+        function moveCharacter(e) {
+            if (step >= maxSteps) return;
+
+            step++;
+            
+            character.classList.add('walk-wobble');
+            setTimeout(() => { character.classList.remove('walk-wobble'); }, 150);
+
+            const progress = 10 + (70 * (step / maxSteps));
+            character.style.left = progress + '%';
+
+            if (step === maxSteps) {
+                letter.innerHTML = '✨'; // Mektup açılırken parıltı efekti
+                
+                setTimeout(() => {
+                    finalScreen.classList.add('show');
+                    // İlk büyük patlama (Hızlıca çok kalp atar)
+                    createUniverseBurst(30);
+                    // Ardından sonsuza kadar sürecek evren döngüsünü başlat
+                    startEndlessUniverse();
+                }, 600);
+            }
+        }
+
+        // İlk açılıştaki patlama
+        function createUniverseBurst(count) {
+            for(let i=0; i<count; i++) {
+                spawnParticle(true);
+            }
+        }
+
+        // Hiç bitmeyen kalp evreni döngüsü
+        function startEndlessUniverse() {
+            universeInterval = setInterval(() => {
+                spawnParticle(false);
+            }, 150); // Her 150 milisaniyede yeni bir kalp/yıldız doğar (Hızı buradan ayarlayabilirsin)
+        }
+
+        // Ekrana kalp veya yıldız fırlatan ana fonksiyon
+        function spawnParticle(isBurst) {
+            const container = document.getElementById('final-screen');
+            const particle = document.createElement('div');
+            
+            // Karışık evren ikonları
+            const symbols = ['❤️', '💖', '✨', '💫', '💗', '🤍']; 
+            particle.innerHTML = symbols[Math.floor(Math.random() * symbols.length)];
+            particle.classList.add('universe-particle');
+
+            // Başlangıç konumu (Ekranın ortasından veya rastgele her yerden)
+            if (isBurst) {
+                particle.style.left = '50vw';
+                particle.style.top = '50vh';
+            } else {
+                particle.style.left = Math.random() * 100 + 'vw';
+                particle.style.top = Math.random() * 100 + 'vh';
+            }
+
+            // Gideceği yönü ve mesafeyi hesapla (Uzay boşluğunda dağılıyorlar)
+            const angle = Math.random() * Math.PI * 2;
+            const distance = Math.random() * 200 + 100; // Ne kadar uzağa gidecekleri
+            
+            particle.style.setProperty('--moveX', Math.cos(angle) * distance + 'px');
+            particle.style.setProperty('--moveY', (Math.sin(angle) * distance - 150) + 'px'); // Biraz daha yukarı doğru süzülme eğilimi
+            
+            // Rastgele boyut ve dönüş
+            particle.style.setProperty('--finalScale', Math.random() * 1.5 + 0.5);
+            particle.style.setProperty('--rotation', (Math.random() * 720 - 360) + 'deg');
+
+            // Yazının arkasında derinlik hissi için farklı boyutlar
+            particle.style.fontSize = (Math.random() * 20 + 15) + 'px';
+
+            // Animasyon süresi (Evren döngüsü daha yavaş ve huzurlu olmalı)
+            const duration = isBurst ? (Math.random() * 2 + 2) : (Math.random() * 5 + 4);
+            particle.style.animationDuration = duration + 's';
+
+            container.appendChild(particle);
+
+            // Animasyon bitince elementi DOM'dan temizle (Tarayıcı kasmasın diye çok önemli!)
+            setTimeout(() => {
+                particle.remove();
+            }, duration * 1000);
+        }
+    </script>
+</body>
+</html>
